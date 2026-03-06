@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { searchFoods, calculateMacros, lookupFoodUSDA } from '../../data/foods.js'
+import useAppStore from '../../store/useAppStore.js'
 
 // ── FoodSearch ────────────────────────────────────────────────────────────
 
@@ -165,6 +166,13 @@ const MEAL_LABELS = {
 export default function MealCard({ mealType, data, onChange }) {
   const [expanded, setExpanded] = useState(false)
   const [showSearch, setShowSearch] = useState(false)
+  const [showPresets, setShowPresets] = useState(false)
+  const [showSavePreset, setShowSavePreset] = useState(false)
+  const [presetName, setPresetName] = useState('')
+
+  const currentUser = useAppStore(s => s.currentUser)
+  const updateUser = useAppStore(s => s.updateUser)
+  const presets = currentUser?.settings?.mealPresets?.[mealType] || []
 
   const items = data.items || []
   const totalProtein = items.reduce((sum, i) => sum + (i.protein || 0), 0)
@@ -193,6 +201,28 @@ export default function MealCard({ mealType, data, onChange }) {
 
   const removeItem = (id) => {
     onChange({ ...data, items: items.filter(i => i.id !== id) })
+  }
+
+  const applyPreset = (preset) => {
+    onChange({ ...data, items: preset.items.map(item => ({ ...item, id: crypto.randomUUID() })) })
+    setShowPresets(false)
+  }
+
+  const saveAsPreset = async () => {
+    if (!presetName.trim() || items.length === 0) return
+    const settings = currentUser.settings
+    const existing = settings.mealPresets?.[mealType] || []
+    await updateUser(currentUser.id, {
+      settings: {
+        ...settings,
+        mealPresets: {
+          ...(settings.mealPresets || {}),
+          [mealType]: [...existing, { name: presetName.trim(), items: items.map(({ id, ...rest }) => rest) }]
+        }
+      }
+    })
+    setPresetName('')
+    setShowSavePreset(false)
   }
 
   const toggleCompleted = () => {
@@ -241,6 +271,32 @@ export default function MealCard({ mealType, data, onChange }) {
       {/* Expanded body */}
       {expanded && (
         <div className="px-4 pb-4 space-y-3 border-t border-slate-700/50 pt-3">
+          {/* Presets */}
+          {presets.length > 0 && (
+            <div>
+              <button
+                onClick={() => setShowPresets(!showPresets)}
+                className="text-xs text-brand-400 hover:text-brand-300 font-medium"
+              >
+                📋 Apply preset {showPresets ? '▴' : '▾'}
+              </button>
+              {showPresets && (
+                <div className="mt-2 grid grid-cols-2 gap-2">
+                  {presets.map((p, i) => (
+                    <button
+                      key={i}
+                      onClick={() => applyPreset(p)}
+                      className="text-left px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded-xl text-sm text-slate-100 transition-colors"
+                    >
+                      {p.name}
+                      <span className="text-xs text-slate-400 block">{p.items?.length} item{p.items?.length !== 1 ? 's' : ''}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Food items */}
           {items.map(item => (
             <FoodItem
@@ -261,6 +317,44 @@ export default function MealCard({ mealType, data, onChange }) {
             >
               + Add food item
             </button>
+          )}
+
+          {/* Save as preset */}
+          {items.length > 0 && (
+            <div>
+              {!showSavePreset ? (
+                <button
+                  onClick={() => setShowSavePreset(true)}
+                  className="text-xs text-slate-400 hover:text-slate-200 font-medium"
+                >
+                  + Save as preset
+                </button>
+              ) : (
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={presetName}
+                    onChange={e => setPresetName(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && saveAsPreset()}
+                    placeholder="Preset name (e.g. Standard Breakfast)"
+                    autoFocus
+                    className="flex-1 bg-slate-700 border border-slate-600 rounded-xl px-3 py-2 text-sm text-slate-100 placeholder-slate-400 focus:outline-none focus:border-brand-500"
+                  />
+                  <button
+                    onClick={saveAsPreset}
+                    className="px-3 bg-brand-500 hover:bg-brand-400 text-white text-sm font-semibold rounded-xl transition-colors"
+                  >
+                    Save
+                  </button>
+                  <button
+                    onClick={() => { setShowSavePreset(false); setPresetName('') }}
+                    className="px-2 text-slate-400 hover:text-slate-200 rounded-xl hover:bg-slate-700 transition-colors text-sm"
+                  >
+                    ✕
+                  </button>
+                </div>
+              )}
+            </div>
           )}
 
           {/* Totals */}
