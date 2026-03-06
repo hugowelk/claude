@@ -4,7 +4,7 @@ This file provides guidance for AI assistants (and developers) working with the 
 
 ## Project Status
 
-This repository is in its **initial state** — no source code or configuration has been added yet. This document establishes conventions to follow as the project develops.
+**Active development.** Phases 1–6 of Hugo's Health App are implemented: React PWA with auth, daily logging, dashboard, settings, and Notion sync. See README.md for full feature list and setup instructions.
 
 ## Repository Overview
 
@@ -38,27 +38,50 @@ This repository is in its **initial state** — no source code or configuration 
 
 ## Project Structure
 
-*To be updated as the codebase evolves.* Recommended layout:
-
 ```
 /
-├── CLAUDE.md          # This file — AI assistant guidance
-├── README.md          # Project overview and setup instructions
-├── src/               # Source code
-├── tests/             # Test files
-└── docs/              # Additional documentation
+├── CLAUDE.md                  # This file
+├── README.md                  # Setup and usage guide
+├── package.json               # Dependencies (React, Zustand, idb, Notion client)
+├── vite.config.js             # Vite + PWA plugin config
+├── tailwind.config.js         # Tailwind CSS config
+├── index.html                 # App entry point
+├── public/                    # Static assets (favicon)
+└── src/
+    ├── main.jsx               # React root
+    ├── App.jsx                # Router + auth gate
+    ├── index.css              # Global styles + Tailwind
+    ├── components/
+    │   ├── LoginScreen.jsx    # User selection + PIN entry
+    │   ├── TopBar.jsx         # Date nav + user avatar + sync status
+    │   ├── BottomNav.jsx      # Today / Dashboard / Settings tabs
+    │   └── cards/
+    │       ├── MealCard.jsx       # Meal logging with food search + macros
+    │       ├── WorkoutCard.jsx    # Workout logging with exercise rows
+    │       └── ChecklistCard.jsx  # Supplements & medications toggle list
+    ├── pages/
+    │   ├── TodayPage.jsx      # Daily checklist view
+    │   ├── DashboardPage.jsx  # Weekly stats + streaks
+    │   └── SettingsPage.jsx   # Profile, targets, Notion, user management
+    ├── store/
+    │   └── useAppStore.js     # Zustand store (auth, entries, sync)
+    ├── lib/
+    │   ├── crypto.js          # SHA-256 PIN hashing (Web Crypto API)
+    │   ├── db.js              # IndexedDB via idb (users, logs, settings)
+    │   └── notion.js          # Notion API client + upsert helpers
+    └── data/
+        ├── foods.js           # Built-in nutrition DB + USDA API lookup
+        └── exercises.js       # Exercise list + workout presets
 ```
 
 ## Commands Reference
 
-*To be populated once the build system is configured.* Expected entries:
-
 | Task | Command |
 |------|---------|
-| Install dependencies | TBD |
-| Run tests | TBD |
-| Lint / format | TBD |
-| Build | TBD |
+| Install dependencies | `npm install` |
+| Dev server | `npm run dev` |
+| Build | `npm run build` |
+| Preview production build | `npm run preview` |
 
 ## Guidelines for AI Assistants
 
