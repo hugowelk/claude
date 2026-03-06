@@ -1,9 +1,11 @@
-import { useEffect, useCallback } from 'react'
+import { useCallback } from 'react'
 import useAppStore from '../store/useAppStore.js'
 import MealCard from '../components/cards/MealCard.jsx'
 import WorkoutCard from '../components/cards/WorkoutCard.jsx'
 import ChecklistCard from '../components/cards/ChecklistCard.jsx'
+import WaterCard from '../components/cards/WaterCard.jsx'
 import { defaultDayEntry } from '../store/useAppStore.js'
+import { useSwipe } from '../hooks/useSwipe.js'
 
 // ── Macro progress bar ─────────────────────────────────────────────────────
 
@@ -29,6 +31,14 @@ function MacroBar({ label, current, target, unit, color }) {
   )
 }
 
+// ── Helpers ────────────────────────────────────────────────────────────────
+
+function addDays(dateStr, n) {
+  const d = new Date(dateStr + 'T00:00:00')
+  d.setDate(d.getDate() + n)
+  return d.toISOString().split('T')[0]
+}
+
 // ── TodayPage ──────────────────────────────────────────────────────────────
 
 export default function TodayPage() {
@@ -37,27 +47,38 @@ export default function TodayPage() {
   const dayLoading = useAppStore(s => s.dayLoading)
   const saveDayEntry = useAppStore(s => s.saveDayEntry)
   const selectedDate = useAppStore(s => s.selectedDate)
+  const setSelectedDate = useAppStore(s => s.setSelectedDate)
+
+  const today = new Date().toISOString().split('T')[0]
+
+  // Swipe left = next day, swipe right = previous day
+  const swipeHandlers = useSwipe({
+    onSwipeLeft: () => {
+      if (selectedDate < today) setSelectedDate(addDays(selectedDate, 1))
+    },
+    onSwipeRight: () => setSelectedDate(addDays(selectedDate, -1)),
+  })
 
   const entry = dayEntry?.entryData || defaultDayEntry()
   const settings = currentUser?.settings || {}
-  const cardOrder = settings.cardOrder || ['breakfast', 'morningSupplements', 'lunch', 'dinner', 'snacks', 'workout', 'medications']
+  const cardOrder = settings.cardOrder || [
+    'breakfast', 'morningSupplements', 'lunch',
+    'dinner', 'snacks', 'workout', 'medications', 'water'
+  ]
 
-  const totalCalories = Object.values(entry)
-    .filter(c => c.items)
-    .flatMap(c => c.items || [])
+  const totalCalories = ['breakfast', 'lunch', 'dinner', 'snacks']
+    .flatMap(k => entry[k]?.items || [])
     .reduce((sum, i) => sum + (i.calories || 0), 0)
 
-  const totalProtein = Object.values(entry)
-    .filter(c => c.items)
-    .flatMap(c => c.items || [])
+  const totalProtein = ['breakfast', 'lunch', 'dinner', 'snacks']
+    .flatMap(k => entry[k]?.items || [])
     .reduce((sum, i) => sum + (i.protein || 0), 0)
 
   const completedCards = Object.values(entry).filter(c => c.completed).length
-  const totalCards = Object.keys(entry).length
+  const totalCards = cardOrder.length
 
   const updateCard = useCallback((cardKey, newData) => {
-    const updated = { ...entry, [cardKey]: newData }
-    saveDayEntry(updated)
+    saveDayEntry({ ...entry, [cardKey]: newData })
   }, [entry, saveDayEntry])
 
   if (dayLoading) {
@@ -69,7 +90,10 @@ export default function TodayPage() {
   }
 
   return (
-    <div className="px-4 py-4 pb-safe space-y-4">
+    <div
+      className="px-4 py-4 pb-safe space-y-3"
+      {...swipeHandlers}
+    >
       {/* Daily summary strip */}
       <div className="bg-slate-800 border border-slate-700 rounded-2xl p-4">
         <div className="flex items-center justify-between mb-3">
@@ -104,32 +128,38 @@ export default function TodayPage() {
               key={cardKey}
               mealType={cardKey}
               data={cardData}
-              onChange={data => updateCard(cardKey, data)}
+              onChange={d => updateCard(cardKey, d)}
             />
           )
         }
-
         if (cardKey === 'workout') {
           return (
             <WorkoutCard
               key={cardKey}
               data={cardData}
-              onChange={data => updateCard(cardKey, data)}
+              onChange={d => updateCard(cardKey, d)}
             />
           )
         }
-
         if (['morningSupplements', 'medications'].includes(cardKey)) {
           return (
             <ChecklistCard
               key={cardKey}
               cardType={cardKey}
               data={cardData}
-              onChange={data => updateCard(cardKey, data)}
+              onChange={d => updateCard(cardKey, d)}
             />
           )
         }
-
+        if (cardKey === 'water') {
+          return (
+            <WaterCard
+              key={cardKey}
+              data={entry.water || { completed: false, amount: 0 }}
+              onChange={d => updateCard('water', d)}
+            />
+          )
+        }
         return null
       })}
     </div>

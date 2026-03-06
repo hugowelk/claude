@@ -29,18 +29,22 @@ export default function TopBar() {
   const today = new Date().toISOString().split('T')[0]
   const isFuture = selectedDate > today
 
+  const queuedCount = useAppStore(s => s.queuedCount)
+
   const syncIcon = {
     idle: null,
     syncing: '⟳',
     success: '✓',
     error: '!',
+    offline: '⚡',
   }[syncStatus]
 
   const syncColor = {
     idle: '',
-    syncing: 'text-slate-400 animate-spin',
+    syncing: 'text-slate-400',
     success: 'text-brand-400',
     error: 'text-red-400',
+    offline: 'text-orange-400',
   }[syncStatus]
 
   return (
@@ -75,7 +79,9 @@ export default function TopBar() {
         {/* Right: sync + user avatar */}
         <div className="flex items-center gap-2">
           {syncIcon && (
-            <span className={`text-xs font-bold ${syncColor}`}>{syncIcon}</span>
+            <span className={`text-xs font-bold ${syncColor}`} title={queuedCount > 0 ? `${queuedCount} changes queued` : ''}>
+              {syncIcon}{queuedCount > 0 ? <sup className="text-[9px] ml-0.5">{queuedCount}</sup> : null}
+            </span>
           )}
           <div className="relative">
             <button

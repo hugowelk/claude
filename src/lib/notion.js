@@ -178,3 +178,57 @@ export async function syncDailyLog(notion, databaseId, log) {
     return notion.createPage(databaseId, properties)
   }
 }
+
+// ── Users DB sync ──────────────────────────────────────────────────────────
+
+/**
+ * Find a user page in the Notion Users DB by User ID
+ */
+async function findUserPage(notion, databaseId, userId) {
+  const response = await notion.queryDatabase(databaseId, {
+    property: 'User ID', rich_text: { equals: userId }
+  })
+  return response.results[0] ?? null
+}
+
+/**
+ * Upsert a user to the Notion Users database.
+ * PIN hash is included so the DB can serve as a backup — it is never
+ * used to authenticate directly; local IndexedDB is the auth source.
+ */
+export async function syncUserToNotion(notion, databaseId, user) {
+  const properties = buildUserProperties(user)
+  const existing = await findUserPage(notion, databaseId, user.id)
+  if (existing) {
+    return notion.updatePage(existing.id, properties)
+  } else {
+    return notion.createPage(databaseId, properties)
+  }
+}
+
+/**
+ * Pull all users from the Notion Users database and return as local user objects.
+ * Merges with locally known data — Notion is the source for name/avatar/settings.
+ */
+export async function pullUsersFromNotion(notion, databaseId) {
+  const response = await notion.queryDatabase(databaseId, undefined, [
+    { property: 'Name', direction: 'ascending' }
+  ])
+
+  return response.results.map(page => {
+    const p = page.properties
+    const settingsStr = extractText(p['Settings'])
+    let settings = {}
+    try { settings = JSON.parse(settingsStr) } catch {}
+
+    return {
+      id: extractText(p['User ID']),
+      name: extractTitle(page),
+      avatar: extractText(p['Avatar']) || '👤',
+      pinHash: extractText(p['PIN Hash']),
+      isAdmin: extractCheckbox(p['Is Admin']),
+      settings,
+      notionPageId: page.id,
+    }
+  }).filter(u => u.id) // drop malformed rows
+}
