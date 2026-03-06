@@ -10,6 +10,8 @@ export async function analyzeMeal(description, apiKey) {
       content: `Estimate the total calories and protein (in grams) for this meal: "${description}". Reply with ONLY a JSON object like {"calories": 450, "protein": 32}. No explanation.`
     }]
   })
-  const text = msg.content[0].text.trim().replace(/^```[a-z]*\n?|\n?```$/g, '')
-  return JSON.parse(text)
+  const text = msg.content[0].text
+  const match = text.match(/\{[^}]+\}/)
+  if (!match) throw new Error('No JSON found in response')
+  return JSON.parse(match[0])
 }
