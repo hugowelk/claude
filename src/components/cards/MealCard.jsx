@@ -17,8 +17,8 @@ function MealInput({ onAdd, apiKey }) {
       const { calories, protein } = await analyzeMeal(text.trim(), apiKey)
       onAdd({ name: text.trim(), protein: Math.round(protein * 10) / 10, calories: Math.round(calories) })
       setText('')
-    } catch {
-      setError('Could not analyze meal. Check your API key.')
+    } catch (err) {
+      setError(err.message || 'Could not analyze meal.')
     } finally {
       setLoading(false)
     }
