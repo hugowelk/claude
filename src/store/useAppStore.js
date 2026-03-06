@@ -31,6 +31,12 @@ export function defaultSettings() {
     ],
     medications: [],
     workoutPresets: WORKOUT_PRESETS_DEFAULT,
+    mealPresets: {
+      breakfast: [],
+      lunch: [],
+      dinner: [],
+      snacks: [],
+    },
   }
 }
 

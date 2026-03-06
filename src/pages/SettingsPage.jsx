@@ -523,6 +523,80 @@ function ItemListSection({ title, settingsKey, icon }) {
   )
 }
 
+// ── Meal Presets ──────────────────────────────────────────────────────────
+
+const MEAL_PRESET_META = {
+  breakfast: { label: 'Breakfast', icon: '🌅' },
+  lunch: { label: 'Lunch', icon: '☀️' },
+  dinner: { label: 'Dinner', icon: '🌙' },
+  snacks: { label: 'Snacks', icon: '🍎' },
+}
+
+function MealPresetsSection() {
+  const currentUser = useAppStore(s => s.currentUser)
+  const updateUser = useAppStore(s => s.updateUser)
+  const settings = currentUser?.settings || defaultSettings()
+  const mealPresets = settings.mealPresets || {}
+
+  const savePresets = async (updated) => {
+    await updateUser(currentUser.id, { settings: { ...settings, mealPresets: updated } })
+  }
+
+  const deletePreset = (mealType, i) => {
+    if (!confirm(`Remove preset "${mealPresets[mealType][i].name}"?`)) return
+    savePresets({ ...mealPresets, [mealType]: mealPresets[mealType].filter((_, idx) => idx !== i) })
+  }
+
+  const renamePreset = (mealType, i, name) => {
+    savePresets({ ...mealPresets, [mealType]: mealPresets[mealType].map((p, idx) => idx === i ? { ...p, name } : p) })
+  }
+
+  const allEmpty = Object.values(mealPresets).every(arr => !arr?.length)
+
+  return (
+    <Section title="🍽️ Meal Presets">
+      {allEmpty ? (
+        <div className="px-4 py-3">
+          <p className="text-sm text-slate-400">No meal presets yet.</p>
+          <p className="text-xs text-slate-500 mt-1">Open a meal card, fill it in, then tap "+ Save as preset".</p>
+        </div>
+      ) : (
+        Object.entries(MEAL_PRESET_META).map(([mealType, { label, icon }]) => {
+          const presets = mealPresets[mealType] || []
+          if (!presets.length) return null
+          return (
+            <div key={mealType} className="px-4 py-3 space-y-2 border-b border-slate-700/50 last:border-0">
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{icon} {label}</p>
+              {presets.map((preset, i) => (
+                <div key={i} className="flex items-center gap-2 bg-slate-700/40 rounded-xl px-3 py-2.5">
+                  <input
+                    type="text"
+                    value={preset.name}
+                    onChange={e => renamePreset(mealType, i, e.target.value)}
+                    className="flex-1 bg-transparent text-sm text-slate-100 focus:outline-none min-w-0"
+                  />
+                  <span className="text-xs text-slate-500 shrink-0">{preset.items?.length} item{preset.items?.length !== 1 ? 's' : ''}</span>
+                  <button
+                    onClick={() => deletePreset(mealType, i)}
+                    className="text-red-400 hover:text-red-300 text-xs px-2 py-1 rounded-lg hover:bg-slate-700 transition-colors shrink-0"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
+          )
+        })
+      )}
+      {!allEmpty && (
+        <div className="px-4 py-2">
+          <p className="text-xs text-slate-500">Rename presets inline. Create new ones from a meal card.</p>
+        </div>
+      )}
+    </Section>
+  )
+}
+
 // ── Notion Config ─────────────────────────────────────────────────────────
 
 function NotionSection() {
@@ -741,6 +815,7 @@ export default function SettingsPage() {
       <UnitsSection />
       <CardOrderSection />
       <WorkoutPresetsSection />
+      <MealPresetsSection />
       <ItemListSection title="Supplements" settingsKey="supplements" icon="💊" />
       <ItemListSection title="Medications" settingsKey="medications" icon="💉" />
       <NotionSection />
