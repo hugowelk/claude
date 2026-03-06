@@ -597,6 +597,40 @@ function MealPresetsSection() {
   )
 }
 
+// ── AI Config ─────────────────────────────────────────────────────────────
+
+function AISection() {
+  const claudeApiKey = useAppStore(s => s.claudeApiKey)
+  const saveClaudeApiKey = useAppStore(s => s.saveClaudeApiKey)
+  const [apiKey, setApiKey] = useState(claudeApiKey || '')
+  const [saved, setSaved] = useState(false)
+
+  const save = async () => {
+    await saveClaudeApiKey(apiKey)
+    setSaved(true)
+    setTimeout(() => setSaved(false), 2000)
+  }
+
+  return (
+    <Section title="🤖 AI Settings">
+      <div className="p-4 space-y-3">
+        <div>
+          <label className="text-xs text-slate-400 block mb-1">Claude API Key</label>
+          <input type="password" value={apiKey} onChange={e => setApiKey(e.target.value)}
+            placeholder="sk-ant-..."
+            className="w-full bg-slate-700 border border-slate-600 rounded-xl px-3 py-2.5 text-sm text-slate-100 placeholder-slate-400 focus:outline-none focus:border-brand-500"
+          />
+        </div>
+        <button onClick={save}
+          className="w-full py-2.5 bg-brand-500 hover:bg-brand-400 text-white text-sm font-semibold rounded-xl transition-colors">
+          {saved ? '✓ Saved' : 'Save AI Config'}
+        </button>
+        <p className="text-xs text-slate-500">Used to analyze meals from free-text descriptions.</p>
+      </div>
+    </Section>
+  )
+}
+
 // ── Notion Config ─────────────────────────────────────────────────────────
 
 function NotionSection() {
@@ -818,6 +852,7 @@ export default function SettingsPage() {
       <MealPresetsSection />
       <ItemListSection title="Supplements" settingsKey="supplements" icon="💊" />
       <ItemListSection title="Medications" settingsKey="medications" icon="💉" />
+      <AISection />
       <NotionSection />
 
       {currentUser?.isAdmin && <ManageUsersSection />}
