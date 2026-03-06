@@ -76,15 +76,17 @@ const useAppStore = create((set, get) => ({
   notionApiKey: null,
   notionUsersDbId: null,
   notionLogsDbId: null,
+  claudeApiKey: null,
 
   // ── Init ────────────────────────────────────────────────────────────────
 
   async init() {
-    const [users, apiKey, usersDbId, logsDbId] = await Promise.all([
+    const [users, apiKey, usersDbId, logsDbId, claudeKey] = await Promise.all([
       getUsers(),
       getAppSetting('notionApiKey'),
       getAppSetting('notionUsersDbId'),
       getAppSetting('notionLogsDbId'),
+      getAppSetting('claudeApiKey'),
     ])
 
     set({
@@ -92,6 +94,7 @@ const useAppStore = create((set, get) => ({
       notionApiKey: apiKey || null,
       notionUsersDbId: usersDbId || null,
       notionLogsDbId: logsDbId || null,
+      claudeApiKey: claudeKey || null,
     })
 
     // Wire up online event to drain the sync queue
@@ -378,6 +381,11 @@ const useAppStore = create((set, get) => ({
       setAppSetting('notionLogsDbId', logsDbId),
     ])
     set({ notionApiKey: apiKey, notionUsersDbId: usersDbId, notionLogsDbId: logsDbId })
+  },
+
+  async saveClaudeApiKey(apiKey) {
+    await setAppSetting('claudeApiKey', apiKey)
+    set({ claudeApiKey: apiKey })
   },
 }))
 

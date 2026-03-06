@@ -1,0 +1,15 @@
+import Anthropic from '@anthropic-ai/sdk'
+
+export async function analyzeMeal(description, apiKey) {
+  const client = new Anthropic({ apiKey, dangerouslyAllowBrowser: true })
+  const msg = await client.messages.create({
+    model: 'claude-haiku-4-5-20251001',
+    max_tokens: 128,
+    messages: [{
+      role: 'user',
+      content: `Estimate the total calories and protein (in grams) for this meal: "${description}". Reply with ONLY a JSON object like {"calories": 450, "protein": 32}. No explanation.`
+    }]
+  })
+  const text = msg.content[0].text.trim()
+  return JSON.parse(text)
+}

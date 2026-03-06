@@ -1,66 +1,49 @@
-import { useState, useRef, useEffect } from 'react'
-import { searchFoods, calculateMacros, lookupFoodUSDA } from '../../data/foods.js'
+import { useState } from 'react'
+import { analyzeMeal } from '../../lib/ai.js'
 import useAppStore from '../../store/useAppStore.js'
 
-// ── FoodSearch ────────────────────────────────────────────────────────────
+// ── MealInput ──────────────────────────────────────────────────────────────
 
-function FoodSearch({ onSelect }) {
-  const [query, setQuery] = useState('')
-  const [results, setResults] = useState([])
+function MealInput({ onAdd, apiKey }) {
+  const [text, setText] = useState('')
   const [loading, setLoading] = useState(false)
-  const debounceRef = useRef(null)
+  const [error, setError] = useState('')
 
-  const search = (q) => {
-    setQuery(q)
-    clearTimeout(debounceRef.current)
-    const local = searchFoods(q)
-    setResults(local)
-    if (local.length < 3 && q.length >= 3) {
-      setLoading(true)
-      debounceRef.current = setTimeout(async () => {
-        const usda = await lookupFoodUSDA(q)
-        if (usda && !local.find(f => f.name.toLowerCase() === usda.name.toLowerCase())) {
-          setResults(prev => [...prev, usda])
-        }
-        setLoading(false)
-      }, 600)
+  const analyze = async () => {
+    if (!text.trim()) return
+    if (!apiKey) { setError('Add a Claude API key in Settings → AI Settings'); return }
+    setLoading(true); setError('')
+    try {
+      const { calories, protein } = await analyzeMeal(text.trim(), apiKey)
+      onAdd({ name: text.trim(), protein: Math.round(protein * 10) / 10, calories: Math.round(calories) })
+      setText('')
+    } catch {
+      setError('Could not analyze meal. Check your API key.')
+    } finally {
+      setLoading(false)
     }
   }
 
   return (
-    <div className="relative">
-      <input
-        type="text"
-        value={query}
-        onChange={e => search(e.target.value)}
-        placeholder="Search food..."
-        className="w-full bg-slate-700 border border-slate-600 rounded-xl px-4 py-3 text-slate-100 placeholder-slate-400 text-sm focus:outline-none focus:border-brand-500"
-        autoComplete="off"
-      />
-      {loading && (
-        <span className="absolute right-3 top-3.5 text-xs text-slate-400">searching...</span>
-      )}
-      {results.length > 0 && query.length >= 2 && (
-        <div className="absolute top-full left-0 right-0 z-50 bg-slate-800 border border-slate-600 rounded-xl mt-1 max-h-48 overflow-y-auto shadow-xl">
-          {results.map((food, i) => (
-            <button
-              key={i}
-              onClick={() => { onSelect(food); setQuery(''); setResults([]) }}
-              className="w-full text-left px-4 py-3 hover:bg-slate-700 transition-colors border-b border-slate-700 last:border-0"
-            >
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-slate-100">{food.name}</span>
-                {food.approximate && (
-                  <span className="text-xs text-yellow-500 ml-2">~USDA</span>
-                )}
-              </div>
-              <span className="text-xs text-slate-400">
-                {food.protein}g protein · {food.calories} kcal per {food.servingSize}{food.unit}
-              </span>
-            </button>
-          ))}
-        </div>
-      )}
+    <div className="space-y-2">
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={text}
+          onChange={e => setText(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && analyze()}
+          placeholder="e.g. 4 eggs, granola, berries and yogurt"
+          className="flex-1 bg-slate-700 border border-slate-600 rounded-xl px-4 py-3 text-slate-100 placeholder-slate-400 text-sm focus:outline-none focus:border-brand-500"
+        />
+        <button
+          onClick={analyze}
+          disabled={loading || !text.trim()}
+          className="px-4 bg-brand-500 hover:bg-brand-400 disabled:opacity-50 text-white text-sm font-semibold rounded-xl transition-colors shrink-0"
+        >
+          {loading ? '…' : 'Analyze'}
+        </button>
+      </div>
+      {error && <p className="text-xs text-red-400">{error}</p>}
     </div>
   )
 }
@@ -76,7 +59,7 @@ function FoodItem({ item, onUpdate, onRemove }) {
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium text-slate-100 truncate">{item.name}</p>
           <p className="text-xs text-slate-400">
-            {item.quantity}{item.unit} · {item.protein}g protein · {item.calories} kcal
+            {item.protein}g protein · {item.calories} kcal
           </p>
         </div>
         <div className="flex items-center gap-1 shrink-0">
@@ -95,31 +78,7 @@ function FoodItem({ item, onUpdate, onRemove }) {
         </div>
       </div>
       {expanded && (
-        <div className="mt-3 grid grid-cols-3 gap-2 pt-3 border-t border-slate-600">
-          <div>
-            <label className="text-xs text-slate-400 block mb-1">Quantity</label>
-            <input
-              type="number"
-              value={item.quantity}
-              onChange={e => {
-                const qty = parseFloat(e.target.value) || 0
-                const ratio = item.baseFood
-                  ? qty / item.baseFood.servingSize
-                  : item.quantity > 0 ? qty / item.quantity : 1
-                onUpdate({
-                  quantity: qty,
-                  protein: item.baseFood
-                    ? Math.round(item.baseFood.protein * ratio * 10) / 10
-                    : item.protein,
-                  calories: item.baseFood
-                    ? Math.round(item.baseFood.calories * ratio)
-                    : item.calories,
-                })
-              }}
-              className="w-full bg-slate-700 border border-slate-600 rounded-lg px-2 py-1.5 text-sm text-slate-100 focus:outline-none focus:border-brand-500"
-              min="0"
-            />
-          </div>
+        <div className="mt-3 grid grid-cols-2 gap-2 pt-3 border-t border-slate-600">
           <div>
             <label className="text-xs text-slate-400 block mb-1">Protein (g)</label>
             <input
@@ -165,31 +124,30 @@ const MEAL_LABELS = {
 
 export default function MealCard({ mealType, data, onChange }) {
   const [expanded, setExpanded] = useState(false)
-  const [showSearch, setShowSearch] = useState(false)
   const [showPresets, setShowPresets] = useState(false)
   const [showSavePreset, setShowSavePreset] = useState(false)
   const [presetName, setPresetName] = useState('')
 
   const currentUser = useAppStore(s => s.currentUser)
   const updateUser = useAppStore(s => s.updateUser)
+  const claudeApiKey = useAppStore(s => s.claudeApiKey)
   const presets = currentUser?.settings?.mealPresets?.[mealType] || []
 
   const items = data.items || []
   const totalProtein = items.reduce((sum, i) => sum + (i.protein || 0), 0)
   const totalCalories = items.reduce((sum, i) => sum + (i.calories || 0), 0)
 
-  const addFood = (food) => {
+  const addMealItem = ({ name, protein, calories }) => {
     const newItem = {
       id: crypto.randomUUID(),
-      name: food.name,
-      quantity: food.servingSize,
-      unit: food.unit,
-      protein: food.protein,
-      calories: food.calories,
-      baseFood: food,
+      name,
+      quantity: 1,
+      unit: '',
+      protein,
+      calories,
+      baseFood: null,
     }
     onChange({ ...data, items: [...items, newItem] })
-    setShowSearch(false)
   }
 
   const updateItem = (id, updates) => {
@@ -307,17 +265,8 @@ export default function MealCard({ mealType, data, onChange }) {
             />
           ))}
 
-          {/* Add food */}
-          {showSearch ? (
-            <FoodSearch onSelect={addFood} />
-          ) : (
-            <button
-              onClick={() => setShowSearch(true)}
-              className="w-full py-2.5 border-2 border-dashed border-slate-600 rounded-xl text-sm text-slate-400 hover:border-brand-500 hover:text-brand-400 transition-colors"
-            >
-              + Add food item
-            </button>
-          )}
+          {/* AI meal input */}
+          <MealInput onAdd={addMealItem} apiKey={claudeApiKey} />
 
           {/* Save as preset */}
           {items.length > 0 && (
