@@ -1,15 +1,21 @@
 /**
  * Notion API integration
- * All requests go through a simple proxy to avoid CORS.
- * In development, use Notion's API directly if backend is available,
- * or configure a server-side proxy.
  *
- * For a PWA, we call the Notion API via a serverless function or proxy endpoint.
- * The API key is stored locally and sent with each request.
+ * In development (localhost): requests go directly to api.notion.com.
+ * In production: requests are routed through the /api/notion proxy
+ * (Vercel Edge Function at api/notion.js) to avoid CORS restrictions.
+ *
+ * The API key is stored locally by the client and forwarded with each request.
  */
 
+// Always route through /api/notion/v1:
+//   - In production (Vercel): handled by the Edge Function at api/notion/[...path].js
+//   - In dev (Vite): proxied to https://api.notion.com by vite.config.js server.proxy
+function notionBase() {
+  return '/api/notion/v1'
+}
+
 export function createNotionClient(apiKey) {
-  const BASE = 'https://api.notion.com/v1'
   const headers = {
     'Authorization': `Bearer ${apiKey}`,
     'Content-Type': 'application/json',
@@ -17,7 +23,7 @@ export function createNotionClient(apiKey) {
   }
 
   async function request(method, path, body) {
-    const res = await fetch(`${BASE}${path}`, {
+    const res = await fetch(`${notionBase()}${path}`, {
       method,
       headers,
       body: body ? JSON.stringify(body) : undefined

@@ -3,6 +3,18 @@ import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
+  server: {
+    proxy: {
+      // In dev, proxy /api/notion/* → https://api.notion.com/*
+      // This avoids CORS issues without needing a browser extension
+      '/api/notion': {
+        target: 'https://api.notion.com',
+        changeOrigin: true,
+        rewrite: path => path.replace(/^\/api\/notion/, ''),
+        secure: true,
+      }
+    }
+  },
   plugins: [
     react(),
     VitePWA({
@@ -33,7 +45,7 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
         runtimeCaching: [
           {
-            urlPattern: /^https:\/\/api\.notion\.com\/.*/i,
+            urlPattern: /\/(api\/notion|api\.notion\.com)\/.*/i,
             handler: 'NetworkFirst',
             options: {
               cacheName: 'notion-api-cache',
