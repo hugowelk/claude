@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-This file provides guidance for AI assistants (and developers) working with the `hugowelk/claude` repository.
+This file provides guidance for AI assistants (and developers) working with the `hugowelk/hugo-health` repository.
 
 ## Project Status
 
@@ -8,7 +8,7 @@ This file provides guidance for AI assistants (and developers) working with the 
 
 ## Repository Overview
 
-- **Repository**: `hugowelk/claude`
+- **Repository**: `hugowelk/hugo-health`
 - **Branch strategy**: Feature branches prefixed with `claude/`
 
 ## Development Conventions
