@@ -11,7 +11,9 @@ export async function analyzeMeal(description, apiKey) {
     }]
   })
   const text = msg.content[0].text
+  console.log('AI raw response:', JSON.stringify(text))
   const match = text.match(/\{[^}]+\}/)
+  console.log('AI match:', match)
   if (!match) throw new Error('No JSON found in response')
   return JSON.parse(match[0])
 }
